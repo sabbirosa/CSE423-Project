@@ -641,6 +641,7 @@ class GameRenderer:
         glPopMatrix() 
 
 
+
 class GameState:
     def __init__(self):
         # Player state
@@ -721,8 +722,7 @@ class GameState:
     def spawn_asteroid_wave(self):
         self.asteroids = []
         
-        # Check if this wave should have a boss
-        if self.wave > 0 and self.wave % self.boss_wave_interval == 0:
+        if self.wave % self.boss_wave_interval == 0:
             self.boss_active = True
             self.spawn_boss_asteroid()
         else:
@@ -932,8 +932,9 @@ class GameState:
         self.update_timers()
         
         # Spawn new asteroid wave if there are none and we're not in boss mode
-        # This is now handled in update_asteroids to avoid double spawning
-        
+        if len(self.asteroids) == 0 and not self.boss_active:
+            self.spawn_asteroid_wave()
+
         if self.player_health <= 0 or self.bullets_missed >= self.max_missed_bullets:
             self.game_over = True
 
@@ -1000,14 +1001,6 @@ class GameState:
         for i in sorted(asteroids_to_remove, reverse=True):
             if i < len(self.asteroids):
                 self.asteroids.pop(i)
-
-        # Increment wave if asteroids are cleared
-        if len(self.asteroids) == 0 and not self.boss_active:
-            self.wave += 1
-
-        # Spawn new asteroid wave if there are none and we're not in boss mode
-        if len(self.asteroids) == 0 and not self.boss_active:
-            self.spawn_asteroid_wave()
 
     def update_boss(self):
         boss = self.boss_asteroid
@@ -1232,7 +1225,6 @@ class GameState:
 
     def reset_game(self):
         self.__init__()  
-
 
 
 class InputHandler:
