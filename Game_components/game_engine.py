@@ -11,7 +11,7 @@ class GameEngine:
         self.window_width = 800
         self.window_height = 600 
 
-    def __init__(self):
+    def init_opengl(self):
         glClearColor(0.02, 0.05, 0.1, 1.0) #Background color (Color of the space)
 
         glEnable(GL_DEPTH_TEST)
@@ -58,7 +58,7 @@ class GameEngine:
         glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
         glutInitWindowSize(self.window_width, self.window_height)
         glutCreateWindow(b"Space Survival 3D")
-
+        
         self.init_opengl()
         self.setup_callbacks()
-        glutMainLoop
+        glutMainLoop()
