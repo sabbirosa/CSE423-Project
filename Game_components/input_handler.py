@@ -19,18 +19,21 @@ class InputHandler:
         elif key == 'c':
             if not self.game_state.paused and not self.game_state.game_over:
                 self.game_state.activate_cheat_mode()
+
+        #elif key == 'w':
+            #make it move forward
                 
-        elif key == 'w':
+        elif key == 's':
             if not self.game_state.paused and not self.game_state.game_over:
                 angle_rad = self.game_state.player_rotation * math.pi / 180.0
                 self.game_state.player_pos[0] -= math.sin(angle_rad) * self.game_state.player_speed
                 self.game_state.player_pos[2] -= math.cos(angle_rad) * self.game_state.player_speed
                 
-        elif key == 'a':
+        elif key == 'd':
             if not self.game_state.paused and not self.game_state.game_over:
                 self.game_state.player_rotation = (self.game_state.player_rotation - 5.0) % 360
                 
-        elif key == 'd':
+        elif key == 'a':
             if not self.game_state.paused and not self.game_state.game_over:
                 self.game_state.player_rotation = (self.game_state.player_rotation + 5.0) % 360
         
