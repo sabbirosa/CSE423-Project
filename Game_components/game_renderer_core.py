@@ -4,202 +4,191 @@ from OpenGL.GLUT import *
 import math
 import time
 
-class GameRendererCore:
-    def render_bullets(self, game_state, quadric):
-        for bullet in game_state.bullets:
-           glPushMatrix()
+from Game_components.game_renderer_core import GameRendererCore
+from Game_components.game_render_hud import GameRendererHud
 
-           #Position of the Bullet
-           glTranslatef(bullet["pos"][0], bullet["pos"][1], bullet["pos"][2])
+class GameRenderer:
+    def __init__(self, game_state, window_width=800, window_height=600):
+        self.game_state = game_state
+        self.quadric = gluNewQuadric()
+        self.window_width = window_width
+        self.window_height = window_height
 
-           #Face direction of travel
-           glRotatef(bullet["direction"] * 180.0 / math.pi, 0, 1, 0)
-           glRotatef(90, 0, 0, 1) 
-
-           #Color of the bullet
-           glColor3f(bullet["color"][0], bullet["color"][1], bullet["color"][2])
-
-           gluCylinder(quadric, bullet["size"] * 0.2, bullet["size"] * 0.2, bullet["size"] * 3.0, 8, 1)
-
-           glPushMatrix()
-           glTranslatef(0, 0, bullet["size"] * 3.0)
-           glColor3f(1.0, 1.0, 0.5)
-           gluSphere(quadric, bullet["size"] * 0.3, 8, 8)
-           glPopMatrix()
-
-           #Bullet trails
-           glPushMatrix()
-           glRotatef(180, 0, 1, 0)
-           glColor4f(1.0, 0.6, 0.2, 0.6)
-           gluCylinder(quadric, 0, bullet["size"] * 0.4, bullet["size"] * 2.0, 8, 1)
-           glPopMatrix()
-           glPopMatrix()
-
-    def render_asteroids(self, game_state, quadric):
-        for asteroid in game_state.asteroids:
-            glPushMatrix()
-
-            #Asteriods Positions
-            glTranslatef(asteroid["pos"][0], asteroid["pos"][1], asteroid["pos"][2])
-
-            #Roate Asteriods
-            glRotatef(asteroid["rotation"][0], 1, 0, 0)
-            glRotatef(asteroid["rotation"][1], 0, 1, 0)
-            glRotatef(asteroid["rotation"][2], 0, 0, 1)
-
-            #Asteroids Color
-            glColor3f(asteroid["color"][0], asteroid["color"][1], asteroid["color"][2])
-
-            if asteroid["shape"] == "cube":
-                glutSolidCube(asteroid["size"])
-                for i in range(4):
-                    glPushMatrix()
-                    angle = i * 90.0
-                    x_offset = math.sin(angle * math.pi / 180.0) * asteroid["size"] * 0.5
-                    z_offset = math.cos(angle * math.pi / 180.0) * asteroid["size"] * 0.5
-
-                    glTranslatef(x_offset, asteroid["size"] * 0.4, z_offset)
-                    glColor3f(asteroid["color"][0] * 0.8, asteroid["color"][1] * 0.8, asteroid["color"][2] * 0.8) #Darker Color
-
-                    glScalef(0.3, 0.3, 0.3)
-                    glutSolidCube(asteroid["size"] * 0.5)
-                    glPopMatrix()
-
-            else:
-                gluSphere(quadric, asteroid["size"], 12, 12)
-                for i in range(3):
-                    glPushMatrix()
-                    angle1 = i * 120.0
-                    angle2 = i * 60.0
-                    x_offset = math.sin(angle1 * math.pi / 180.0) * asteroid["size"] * 0.7
-                    y_offset = math.sin(angle2 * math.pi / 180.0) * asteroid["size"] * 0.7
-                    z_offset = math.cos(angle1 * math.pi / 180.0) * asteroid["size"] * 0.7
-
-                    glTranslatef(x_offset, y_offset, z_offset)
-                    glColor3f(asteroid["color"][0] * 0.7, asteroid["color"][1] * 0.7, asteroid["color"][2] * 0.7)
-
-                    gluSphere(quadric, asteroid["size"] * 0.2, 8, 8)
-                    glPopMatrix()
-
-            glPopMatrix()
-
-    def render_boss(self, game_state, quadric):
-        boss = game_state.boss_asteroid
-        if boss:
-            glPushMatrix()
-
-            #Position of the boss
-            glTranslatef(boss["pos"][0], boss["pos"][1], boss["pos"][2])
-
-            glRotatef(boss["rotation"][0], 1, 0, 0)
-            glRotatef(boss["rotation"][1], 0, 1, 0)
-            glRotatef(boss["rotation"][2], 0, 0, 1)
-
-            #Boss color with pulsing
-            if game_state.boss_warning and (game_state.warning_flash_timer % 20 < 10):
-                glColor3f(1.0, 0.2, 0.2)
-            else:
-                glColor3f(boss["color"][0], boss["color"][1], boss["color"][2])
-
-            gluSphere(quadric, boss["size"] * 0.8, 16, 16)
-            offset = boss["size"] * 0.6
-
-            for x in [-1, 1]:
-                for y in [-1, 1]:
-                    for z in [-1, 1]:
-                        glPushMatrix()
-                        glTranslatef(x * offset, y * offset, z * offset)
-                        glColor3f(boss["color"][0] * 0.8, boss["color"][1] * 0.8, boss["color"][2] * 0.8)
-                        glutSolidCube(boss["size"] * 0.5)
-                        glPopMatrix()
-
-            for i in range(6):
-                glPushMatrix()
-
-                if i == 0:
-                    glTranslatef(boss["size"] * 0.8, 0, 0)
-                    glRotatef(90, 0, 1, 0)
-                elif i == 1:
-                    glTranslatef(-boss["size"] * 0.8, 0, 0)
-                    glRotatef(-90, 0, 1, 0)
-                elif i == 2:
-                    glTranslatef(0, boss["size"] * 0.8, 0)
-                    glRotatef(-90, 1, 0, 0)
-                elif i == 3:
-                    glTranslatef(0, -boss["size"] * 0.8, 0)
-                    glRotatef(90, 1, 0, 0)
-                elif i == 4:
-                    glTranslatef(0, 0, boss["size"] * 0.8)
-                else:
-                    glTranslatef(0, 0, -boss["size"] * 0.8)
-                    glRotatef(180, 0, 1, 0)
-
-                #Spikes
-                glColor3f(1.0, 0.3, 0.0)
-                gluCylinder(quadric, boss["size"] * 0.2, 0, boss["size"] * 0.6, 8, 1)
-                glPopMatrix()
-
-            health_percent = boss["hit_points"] / (5.0 + game_state.wave)
-            core_pulse = (math.sin(time.time() * 3.0) + 1.0) * 0.5
-
-            glPushMatrix()
-            glColor3f(1.0, 0.3 + (1.0 - health_percent) * 0.7, 0.0)
-            gluSphere(quadric, boss["size"] * 0.4 * (0.8 + core_pulse * 0.2), 12, 12)
-            glPopMatrix()
-            glPopMatrix()
-
-    def render_powerups(self, game_state, quadric):
-        for powerup in game_state.powerups:
-            glPushMatrix()
-            glTranslatef(powerup["pos"][0], powerup["pos"][1], powerup["pos"][2])
-            glRotatef(powerup["rotation"], 0, 1, 0)
-            glRotatef(time.time() * 30 % 360, 1, 1, 1)
-            glColor3f(powerup["color"][0], powerup["color"][1], powerup["color"][2])
-
-            if powerup["type"] == "health":
-                glutSolidCube(powerup["size"] * 0.8)
-
-                glPushMatrix()
-                glScalef(0.2, 1.0, 0.2)
-                glutSolidCube(powerup["size"] * 1.5)
-                glPopMatrix()
-
-                glPushMatrix()
-                glScalef(1.0, 0.2, 0.2)
-                glutSolidCube(powerup["size"] * 1.5)
-                glPopMatrix()
+        self.renderer_core = GameRendererCore()
+        self.renderer_hud = GameRendererHud()
+        
+    def render_scene(self):
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+       
+        self.setup_camera()
+        
+        self.render_stars()
+        
+        self.render_player()
+        self.renderer_core.render_bullets(self.game_state, self.quadric)
+        self.renderer_core.render_asteroids(self.game_state, self.quadric)
+        
+        if self.game_state.boss_active and self.game_state.boss_asteroid:
+            self.renderer_core.render_boss(self.game_state, self.quadric)
             
-            elif powerup["type"] == "speed":
-                gluSphere(quadric, powerup["size"] * 0.5, 12, 12)
-                glPushMatrix()
-                glTranslatef(0, 0, powerup["size"] * 0.5)
-                glRotatef(90, 1, 0, 0)
-                gluCylinder(quadric, powerup["size"] * 0.2, powerup["size"] * 0.2, powerup["size"] * 0.8, 8, 2)
+        self.renderer_core.render_powerups(self.game_state, self.quadric)
+        self.renderer_core.render_explosions(self.game_state, self.quadric)
+        
+        self.renderer_hud.render_hud(self.game_state, self.window_width, self.window_height)
+        
+        if self.game_state.game_over:
+            self.renderer_hud.render_game_over(self.game_state, self.window_width, self.window_height)
+        
+        if self.game_state.paused:
+            self.renderer_hud.render_paused_screen(self.window_width, self.window_height)
+       
+        glutSwapBuffers()
+        
+    def set_window_size(self, width, height):
+        self.window_width = width
+        self.window_height = height
 
-                glTranslatef(0, 0, powerup["size"] * 0.8)
-                gluCylinder(quadric, powerup["size"] * 0.4, 0, powerup["size"] * 0.4, 8, 2)
-                glPopMatrix()
+    def setup_camera(self):
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        gluPerspective(45.0, self.window_width / self.window_height, 0.1, 100.0)
+        
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
+        
+        if self.game_state.camera_mode == "first_person":
+            angle_rad = self.game_state.player_rotation * math.pi / 180.0
+            
+            # Calculate eye position (at cockpit)
+            eye_x = self.game_state.player_pos[0]
+            eye_y = self.game_state.player_pos[1] + 0.3 
+            eye_z = self.game_state.player_pos[2]
+            
+            # Calculate look-at position (in front of ship)
+            look_x = eye_x + math.sin(angle_rad) * 10
+            look_y = eye_y + math.tan(self.game_state.camera_tilt * math.pi / 180.0)
+            look_z = eye_z + math.cos(angle_rad) * 10
+            
+            gluLookAt(eye_x, eye_y, eye_z, look_x, look_y, look_z, 0, 1, 0)
 
-            else:
-                glutSolidCube(powerup["size"] * 0.6)
-                glColor4f(powerup["color"][0], powerup["color"][1], powerup["color"][2], 0.5)
-                gluSphere(quadric, powerup["size"] * 0.8, 12, 12)
+        # 3rd person view    
+        else:  
+            total_angle_rad = (self.game_state.player_rotation + self.game_state.camera_rotation) * math.pi / 180.0
+            tilt_rad = self.game_state.camera_tilt * math.pi / 180.0
+            
+            distance = 5.0
+          
+            cam_x = self.game_state.player_pos[0] - math.sin(total_angle_rad) * distance
+            cam_y = self.game_state.player_pos[1] + math.sin(tilt_rad) * distance
+            cam_z = self.game_state.player_pos[2] - math.cos(total_angle_rad) * distance
+            
+            gluLookAt(cam_x, cam_y, cam_z, 
+                      self.game_state.player_pos[0], self.game_state.player_pos[1], self.game_state.player_pos[2], 
+                      0, 1, 0)
 
-            pulse = (math.sin(time.time() * 5.0) + 1.0) / 2.0
-            glColor4f(powerup["color"][0], powerup["color"][1], powerup["color"][2], 0.3 * pulse)
-            gluSphere(quadric, powerup["size"] * (1.0 + 0.2 * pulse), 12, 12)
+    def render_stars(self):
+        glDisable(GL_LIGHTING)
+        glDisable(GL_DEPTH_TEST)
+        
+        glPointSize(2.0)
+        glBegin(GL_POINTS)
+        
+        for star in self.game_state.stars:
+            glColor3f(star[3] * self.game_state.colors["stars"][0],
+                      star[3] * self.game_state.colors["stars"][1],
+                      star[3] * self.game_state.colors["stars"][2])
+            
+            glVertex3f(star[0], star[1], star[2])
+            
+        glEnd()
+        
+        glEnable(GL_DEPTH_TEST)
+        glPointSize(1.0)
 
+    def render_player(self):
+        glPushMatrix()
+        
+        glTranslatef(self.game_state.player_pos[0],
+                     self.game_state.player_pos[1],
+                     self.game_state.player_pos[2])
+        
+        glRotatef(self.game_state.player_rotation, 0, 1, 0)  
+ 
+        if self.game_state.cheat_mode_active:
+            rotation_speed = 10.0  
+            current_time = time.time()
+            glRotatef(current_time * 180, 0, 1, 0) 
+
+        if self.game_state.player_shield_active:
+            shield_scale = 1.1 + math.sin(time.time() * 5.0) * 0.1
+            shield_color = self.game_state.colors["shield_powerup"]
+            
+            glColor4f(shield_color[0], shield_color[1], shield_color[2], 0.4)
+            glPushMatrix()
+            glScalef(shield_scale, shield_scale, shield_scale)
+            gluSphere(self.quadric, self.game_state.player_size * 1.2, 16, 16)
             glPopMatrix()
 
-    def render_explosions(self, game_state, quadric):
-        for explosion in game_state.explosions:
-            glPushMatrix()
+        glColor3f(self.game_state.player_color[0],
+                  self.game_state.player_color[1],
+                  self.game_state.player_color[2])
 
-            glTranslatef(explosion["pos"][0], explosion["pos"][1], explosion["pos"][2])
-            glColor4f(explosion["color"][0], explosion["color"][1], explosion["color"][2], explosion["alpha"])
-            gluSphere(quadric, explosion["size"], 12, 12)
-            inner_size = explosion["size"] * 0.7
-            glColor4f(1.0, 0.8, 0.2, explosion["alpha"] * 0.8)
-            gluSphere(quadric, inner_size, 8, 8)
-            
-            glPopMatrix() 
+        glPushMatrix()
+        glScalef(1.0, 0.4, 2.0)  
+        glutSolidCube(self.game_state.player_size)
+        glPopMatrix()
+
+        glPushMatrix()
+        glTranslatef(0, self.game_state.player_size * 0.2, self.game_state.player_size * 0.3)
+        glColor3f(0.2, 0.8, 1.0) 
+        gluSphere(self.quadric, self.game_state.player_size * 0.25, 12, 12)
+        glPopMatrix()
+ 
+        glPushMatrix()
+        glTranslatef(self.game_state.player_size * 0.8, 0, 0)
+        glScalef(0.2, 0.1, 1.0)
+        glColor3f(0.5, 0.7, 0.9)  
+        glutSolidCube(self.game_state.player_size)
+        glPopMatrix()
+        
+        glPushMatrix()
+        glTranslatef(-self.game_state.player_size * 0.8, 0, 0)
+        glScalef(0.2, 0.1, 1.0)
+        glColor3f(0.5, 0.7, 0.9)  
+        glutSolidCube(self.game_state.player_size)
+        glPopMatrix()
+
+        glPushMatrix()
+        glTranslatef(self.game_state.player_size * 0.4, -self.game_state.player_size * 0.1, -self.game_state.player_size * 0.8)
+        glRotatef(90, 1, 0, 0)
+        glColor3f(0.7, 0.3, 0.1)  
+        gluCylinder(self.quadric, self.game_state.player_size * 0.15, 
+                    self.game_state.player_size * 0.15, 
+                    self.game_state.player_size * 0.3, 8, 3)
+        glPopMatrix()
+        
+        glPushMatrix()
+        glTranslatef(-self.game_state.player_size * 0.4, -self.game_state.player_size * 0.1, -self.game_state.player_size * 0.8)
+        glRotatef(90, 1, 0, 0)
+        glColor3f(0.7, 0.3, 0.1)  
+        gluCylinder(self.quadric, self.game_state.player_size * 0.15, 
+                    self.game_state.player_size * 0.15, 
+                    self.game_state.player_size * 0.3, 8, 3)
+        glPopMatrix()
+   
+        engine_glow = (math.sin(time.time() * 10) + 1.0) * 0.5  
+        glPushMatrix()
+        glTranslatef(self.game_state.player_size * 0.4, -self.game_state.player_size * 0.1, -self.game_state.player_size * 0.8 - 0.05)
+        glRotatef(90, 1, 0, 0)
+        glColor3f(1.0, 0.5 + engine_glow * 0.5, 0.0)  
+        gluDisk(self.quadric, 0, self.game_state.player_size * 0.13, 8, 1)
+        glPopMatrix()
+        
+        glPushMatrix()
+        glTranslatef(-self.game_state.player_size * 0.4, -self.game_state.player_size * 0.1, -self.game_state.player_size * 0.8 - 0.05)
+        glRotatef(90, 1, 0, 0)
+        glColor3f(1.0, 0.5 + engine_glow * 0.5, 0.0)  
+        gluDisk(self.quadric, 0, self.game_state.player_size * 0.13, 8, 1)
+        glPopMatrix()
+  
+        glPopMatrix() 
