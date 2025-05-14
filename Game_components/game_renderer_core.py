@@ -190,3 +190,16 @@ class GameRendererCore:
             gluSphere(quadric, powerup["size"] * (1.0 + 0.2 * pulse), 12, 12)
 
             glPopMatrix()
+
+    def render_explosions(self, game_state, quadric):
+        for explosion in game_state.explosions:
+            glPushMatrix()
+
+            glTranslatef(explosion["pos"][0], explosion["pos"][1], explosion["pos"][2])
+            glColor4f(explosion["color"][0], explosion["color"][1], explosion["color"][2], explosion["alpha"])
+            gluSphere(quadric, explosion["size"], 12, 12)
+            inner_size = explosion["size"] * 0.7
+            glColor4f(1.0, 0.8, 0.2, explosion["alpha"] * 0.8)
+            gluSphere(quadric, inner_size, 8, 8)
+            
+            glPopMatrix() 
