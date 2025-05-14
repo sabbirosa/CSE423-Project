@@ -8,7 +8,7 @@ class GameState:
         # Player state
         self.player_pos = [0.0, 0.0, 0.0]
         self.player_rotation = 0.0
-        self.player_health = 30
+        self.player_health = 3  # Changed from 30 to 3 for better health management
         self.player_speed = 0.2
         self.player_size = 0.5
         self.player_color = [0.2, 0.6, 1.0]  # Bright blue
@@ -92,16 +92,12 @@ class GameState:
             asteroid_count = 5 + self.wave * 2 
             
             for i in range(asteroid_count):
-
-                player_angle_rad = self.player_rotation * math.pi / 180.0
-                front_direction_x = math.sin(player_angle_rad)
-                front_direction_z = math.cos(player_angle_rad)
-
-                spawn_angle = player_angle_rad + random.uniform(-math.pi/3, math.pi/3)  
-                distance = random.uniform(20, 30)  
+                # Fixed front direction (z-axis)
+                distance = random.uniform(20, 30)
                 
-                pos_x = self.player_pos[0] + math.sin(spawn_angle) * distance
-                pos_z = self.player_pos[2] + math.cos(spawn_angle) * distance
+                # Randomize x position across the screen width
+                pos_x = random.uniform(-10, 10)
+                pos_z = self.player_pos[2] + distance  # Always in front of the player
              
                 asteroid_type = random.choice(["normal", "fast", "large"])
                 if self.wave < 2:  
@@ -143,11 +139,12 @@ class GameState:
         self.asteroids.append(asteroid)
 
     def spawn_boss_asteroid(self):
-        player_angle_rad = self.player_rotation * math.pi / 180.0
-        distance = 35 
-  
-        pos_x = self.player_pos[0] + math.sin(player_angle_rad) * distance
-        pos_z = self.player_pos[2] + math.cos(player_angle_rad) * distance
+        # Position boss in front of player
+        distance = 35
+        
+        # Random x position but within visible range
+        pos_x = random.uniform(-8, 8)
+        pos_z = self.player_pos[2] + distance
         
         self.boss_asteroid = {
             "pos": [pos_x, 0, pos_z],
@@ -163,13 +160,12 @@ class GameState:
 
     def spawn_powerup(self):
         if random.random() < self.powerup_spawn_chance:
-            player_angle_rad = self.player_rotation * math.pi / 180.0
-            
-            spawn_angle = player_angle_rad + random.uniform(-math.pi/4, math.pi/4) 
+            # Spawn powerup in front of the player
             distance = random.uniform(15, 25)
             
-            pos_x = self.player_pos[0] + math.sin(spawn_angle) * distance
-            pos_z = self.player_pos[2] + math.cos(spawn_angle) * distance
+            # Random x position but within visible range
+            pos_x = random.uniform(-10, 10)
+            pos_z = self.player_pos[2] + distance
        
             powerup_type = random.choice(["health", "speed", "shield"])
            
@@ -192,13 +188,17 @@ class GameState:
             self.powerups.append(powerup)
 
     def shoot_bullet(self):
-        angle_rad = self.player_rotation * math.pi / 180.0
-        front_x = self.player_pos[0] + math.sin(angle_rad) * self.player_size
-        front_z = self.player_pos[2] + math.cos(angle_rad) * self.player_size
+        # Ship always faces forward (fixed direction)
+        # Bullet starts at player position and moves forward
+        front_x = self.player_pos[0]
+        front_z = self.player_pos[2] + self.player_size
+        
+        # Fixed direction (straight ahead)
+        direction = 0  # 0 radians = forward along z-axis
      
         bullet = {
             "pos": [front_x, self.player_pos[1], front_z],
-            "direction": angle_rad,
+            "direction": direction,
             "speed": self.bullet_speed * (2.0 if self.bullet_boost_active else 1.0),
             "distance": 0, 
             "max_distance": 50,  
@@ -213,9 +213,33 @@ class GameState:
             self.cheat_mode_active = True
             self.cheat_mode_cooldown = 1000 
             
+            # Clear all asteroids with explosions
+            for asteroid in self.asteroids[:]:
+                self.add_explosion(asteroid["pos"], asteroid["size"] * 1.5, self.colors["explosion"])
+                self.score += 10
+            
+            # Clear boss if present
+            if self.boss_active and self.boss_asteroid:
+                self.add_explosion(
+                    self.boss_asteroid["pos"], 
+                    self.boss_asteroid["size"] * 2, 
+                    self.colors["explosion"]
+                )
+                self.score += 100
+                self.boss_asteroid = None
+                self.boss_active = False
+                self.boss_warning = False
+            
+            # Clear the asteroids list
+            self.asteroids = []
+            
+            # Create a visual effect of bullets without counting misses
+            # These bullets will be removed immediately after creation
+            bullets_for_effect = []
             for angle in range(0, 360, 15): 
-                # Calculate bullet starting position
                 angle_rad = angle * math.pi / 180.0
+                
+                # Calculate bullet starting position
                 front_x = self.player_pos[0] + math.sin(angle_rad) * self.player_size
                 front_z = self.player_pos[2] + math.cos(angle_rad) * self.player_size
                 
@@ -224,12 +248,15 @@ class GameState:
                     "direction": angle_rad,
                     "speed": self.bullet_speed * 1.5, 
                     "distance": 0,
-                    "max_distance": 50,
+                    "max_distance": 10,  # Short range for visual effect
                     "size": 0.2,  
                     "color": [1.0, 0.3, 0.3] 
                 }
                 
-                self.bullets.append(bullet)
+                bullets_for_effect.append(bullet)
+            
+            # Add the bullets for visual effect only
+            self.bullets.extend(bullets_for_effect)
 
     def add_explosion(self, pos, size, color):
         explosion = {
@@ -264,6 +291,10 @@ class GameState:
         self.spawn_powerup()
 
         self.update_timers()
+        
+        # Spawn new asteroid wave if there are none and we're not in boss mode
+        if len(self.asteroids) == 0 and not self.boss_active:
+            self.spawn_asteroid_wave()
 
         if self.player_health <= 0 or self.bullets_missed >= self.max_missed_bullets:
             self.game_over = True
@@ -283,15 +314,17 @@ class GameState:
         bullets_to_remove = []
         
         for i, bullet in enumerate(self.bullets):
-            bullet["pos"][0] += math.sin(bullet["direction"]) * bullet["speed"]
-            bullet["pos"][2] += math.cos(bullet["direction"]) * bullet["speed"]
+            # Bullets move forward along z-axis
+            bullet["pos"][2] += bullet["speed"]
 
             dist_moved = bullet["speed"]
             bullet["distance"] += dist_moved
 
             if bullet["distance"] >= bullet["max_distance"]:
                 bullets_to_remove.append(i)
-                self.bullets_missed += 1
+                # Only count missed bullets if not in cheat mode
+                if not self.cheat_mode_active:
+                    self.bullets_missed += 1
                 continue
           
             hit = self.check_bullet_collisions(bullet)
@@ -306,17 +339,19 @@ class GameState:
         asteroids_to_remove = []
         
         for i, asteroid in enumerate(self.asteroids):
-            dx = self.player_pos[0] - asteroid["pos"][0]
-            dz = self.player_pos[2] - asteroid["pos"][2]
-            dist = math.sqrt(dx*dx + dz*dz)
+            # Move asteroids toward player's z-position (not tracking player's x position)
+            asteroid["pos"][2] -= asteroid["speed"]  # Move toward player (decreasing z)
 
-            if dist > 0:
-                asteroid["pos"][0] += (dx / dist) * asteroid["speed"]
-                asteroid["pos"][2] += (dz / dist) * asteroid["speed"]
-
+            # Rotate asteroid
             for j in range(3):
                 asteroid["rotation"][j] = (asteroid["rotation"][j] + asteroid["rot_speed"][j]) % 360
 
+            # Check if asteroid passed the player (dodged)
+            if asteroid["pos"][2] < self.player_pos[2]:
+                asteroids_to_remove.append(i)
+                continue
+
+            # Check for collision
             if self.check_player_asteroid_collision(asteroid):
                 if not self.player_shield_active:  # Shield blocks asteroid damage
                     self.player_health -= 1
@@ -328,34 +363,43 @@ class GameState:
             if i < len(self.asteroids):
                 self.asteroids.pop(i)
 
-        if len(self.asteroids) == 0 and not self.boss_active:
-            self.wave += 1
-            self.spawn_asteroid_wave()
-
     def update_boss(self):
         boss = self.boss_asteroid
         
         if boss:
-            dx = self.player_pos[0] - boss["pos"][0]
-            dz = self.player_pos[2] - boss["pos"][2]
-            dist = math.sqrt(dx*dx + dz*dz)
+            # Move boss toward player's z-position
+            boss["pos"][2] -= boss["speed"]
             
-            if dist > 0:
-                boss["pos"][0] += (dx / dist) * boss["speed"]
-                boss["pos"][2] += (dz / dist) * boss["speed"]
+            # Slowly move toward player's x position for more challenge
+            if boss["pos"][0] < self.player_pos[0]:
+                boss["pos"][0] += boss["speed"] * 0.5
+            elif boss["pos"][0] > self.player_pos[0]:
+                boss["pos"][0] -= boss["speed"] * 0.5
             
             for j in range(3):
                 boss["rotation"][j] = (boss["rotation"][j] + boss["rot_speed"][j]) % 360
             
-            if dist < boss["warning_distance"] and not self.boss_warning:
+            # Check if boss passed the player (dodged)
+            if boss["pos"][2] < self.player_pos[2]:
+                self.boss_asteroid = None
+                self.boss_active = False
+                self.boss_warning = False
+                self.wave += 1
+                self.spawn_asteroid_wave()
+                return
+            
+            # Warning when boss is close
+            dist_z = boss["pos"][2] - self.player_pos[2]
+            if dist_z < boss["warning_distance"] and not self.boss_warning:
                 self.boss_warning = True
                 self.warning_flash_timer = 100  # Flash duration
-            elif dist >= boss["warning_distance"]:
+            elif dist_z >= boss["warning_distance"]:
                 self.boss_warning = False
                 
             if self.check_player_asteroid_collision(boss):
                 if not self.player_shield_active:  
-                    self.player_health -= 2  
+                    # Boss causes 1 damage point like regular asteroids
+                    self.player_health -= 1
                     self.add_explosion(self.player_pos, self.player_size * 2.0, self.colors["explosion"])
                 boss["hit_points"] -= 1
                 if boss["hit_points"] <= 0:
@@ -365,15 +409,16 @@ class GameState:
         powerups_to_remove = []
         
         for i, powerup in enumerate(self.powerups):
-            dx = self.player_pos[0] - powerup["pos"][0]
-            dz = self.player_pos[2] - powerup["pos"][2]
-            dist = math.sqrt(dx*dx + dz*dz)
+            # Move powerups toward player
+            powerup["pos"][2] -= powerup["speed"]
             
-            if dist > 0:
-                powerup["pos"][0] += (dx / dist) * powerup["speed"]
-                powerup["pos"][2] += (dz / dist) * powerup["speed"]
-            
+            # Rotate powerup for visual effect
             powerup["rotation"] = (powerup["rotation"] + 2) % 360
+            
+            # Check if powerup passed the player (missed)
+            if powerup["pos"][2] < self.player_pos[2]:
+                powerups_to_remove.append(i)
+                continue
                 
             if self.check_player_powerup_collision(powerup):
                 self.apply_powerup(powerup)
@@ -401,6 +446,10 @@ class GameState:
     def update_timers(self):
         if self.cheat_mode_cooldown > 0:
             self.cheat_mode_cooldown -= 1
+            
+        # Reset cheat mode active flag after a short duration (30 frames)
+        if self.cheat_mode_active:
+            self.cheat_mode_active = False
             
         if self.bullet_boost_timer > 0:
             self.bullet_boost_timer -= 1
@@ -474,17 +523,28 @@ class GameState:
         return False
 
     def check_player_asteroid_collision(self, asteroid):
+        # Check x-axis distance (horizontal plane)
         dx = self.player_pos[0] - asteroid["pos"][0]
+        
+        # Check z-axis distance (depth)
         dz = self.player_pos[2] - asteroid["pos"][2]
+        
+        # Calculate distance in the xz-plane
         dist = math.sqrt(dx*dx + dz*dz)
 
+        # Adjust collision threshold based on asteroid size
         collision_threshold = self.player_size + asteroid["size"] * 0.7
         
         return dist < collision_threshold
 
     def check_player_powerup_collision(self, powerup):
+        # Check x-axis distance (horizontal plane)
         dx = self.player_pos[0] - powerup["pos"][0]
+        
+        # Check z-axis distance (depth)
         dz = self.player_pos[2] - powerup["pos"][2]
+        
+        # Calculate distance in the xz-plane
         dist = math.sqrt(dx*dx + dz*dz)
 
         collision_threshold = self.player_size + powerup["size"]
@@ -495,6 +555,7 @@ class GameState:
         powerup_type = powerup["type"]
         
         if powerup_type == "health":
+            # Increase health by 1, with a maximum of 5
             if self.player_health < 5:  
                 self.player_health += 1
                 
@@ -504,7 +565,7 @@ class GameState:
             
         elif powerup_type == "shield":
             self.player_shield_active = True
-            self.player_shield_timer = 500 
+            self.player_shield_timer = 500
 
     def boss_defeated(self):
         if self.boss_asteroid:

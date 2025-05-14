@@ -1,1 +1,9 @@
-# CSE423-Project
+# Space Survival 3D
+
+Space Survival 3D is a third-person space shooter set in a hostile asteroid belt, where the player pilots a visible spacecraft to survive endless waves of incoming threats.
+Asteroids spawn from deep space and move toward the player with increasing speed and randomness. Over time, asteroid types diversify, some are faster, some are larger, and some break into smaller fragments when hit, adding unpredictability and requiring strategic shooting.
+The player can move the ship within a confined space using keyboard input and must constantly dodge while lining up accurate shots. With a mouse click, bullets fire straight ahead and can destroy asteroids on contact. Collisions with asteroids reduce player health.
+As the difficulty increases, larger asteroids appear that break into smaller ones when they get hit by the bullets. Power-ups occasionally spawn, allowing the player to recover health or temporarily boost bullet speed for faster eliminations. There will be a level-up option.
+Every few waves, a formidable "Boss Asteroid" challenges the player, requiring multiple hits to destroy. The ship glows or HUD flashes red if a large asteroid is dangerously close. In critical moments, the player can activate cheat mode to release a devastating energy blast that clears the entire screen of threats. Cheat mode will decrease the points/ rewards gained by the user.
+A detailed HUD displays score, health, remaining lives, and current wave. It also shows cooldown timers for special abilities. As waves progress, spawn rates and asteroid complexity increase to test player reflexes. The game will have both first-person and third-person views. A button will toggle the view.
+When all lives are lost, the game displays a Game Over screen with final stats and offers a restart option. Game will have pause option too.

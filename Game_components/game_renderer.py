@@ -57,31 +57,29 @@ class GameRenderer:
         glLoadIdentity()
         
         if self.game_state.camera_mode == "first_person":
-            angle_rad = self.game_state.player_rotation * math.pi / 180.0
-            
             # Calculate eye position (at cockpit)
             eye_x = self.game_state.player_pos[0]
             eye_y = self.game_state.player_pos[1] + 0.3 
             eye_z = self.game_state.player_pos[2]
             
-            # Calculate look-at position (in front of ship)
-            look_x = eye_x + math.sin(angle_rad) * 10
-            look_y = eye_y + math.tan(self.game_state.camera_tilt * math.pi / 180.0)
-            look_z = eye_z + math.cos(angle_rad) * 10
+            # Look straight ahead
+            look_x = eye_x
+            look_y = eye_y
+            look_z = eye_z + 10  # Look forward along z-axis
             
             gluLookAt(eye_x, eye_y, eye_z, look_x, look_y, look_z, 0, 1, 0)
 
         # 3rd person view    
         else:  
-            total_angle_rad = (self.game_state.player_rotation + self.game_state.camera_rotation) * math.pi / 180.0
-            tilt_rad = self.game_state.camera_tilt * math.pi / 180.0
-            
+            # Position camera behind and slightly above the player
             distance = 5.0
+            height = 2.0
           
-            cam_x = self.game_state.player_pos[0] - math.sin(total_angle_rad) * distance
-            cam_y = self.game_state.player_pos[1] + math.sin(tilt_rad) * distance
-            cam_z = self.game_state.player_pos[2] - math.cos(total_angle_rad) * distance
+            cam_x = self.game_state.player_pos[0]
+            cam_y = self.game_state.player_pos[1] + height
+            cam_z = self.game_state.player_pos[2] - distance
             
+            # Look at player position
             gluLookAt(cam_x, cam_y, cam_z, 
                       self.game_state.player_pos[0], self.game_state.player_pos[1], self.game_state.player_pos[2], 
                       0, 1, 0)
@@ -112,13 +110,9 @@ class GameRenderer:
                      self.game_state.player_pos[1],
                      self.game_state.player_pos[2])
         
-        glRotatef(self.game_state.player_rotation, 0, 1, 0)  
+        # Always face forward (no rotation)
+        # Fixed rotation of 0 degrees (facing forward along z-axis)
  
-        if self.game_state.cheat_mode_active:
-            rotation_speed = 10.0  
-            current_time = time.time()
-            glRotatef(current_time * 180, 0, 1, 0) 
-
         if self.game_state.player_shield_active:
             shield_scale = 1.1 + math.sin(time.time() * 5.0) * 0.1
             shield_color = self.game_state.colors["shield_powerup"]
